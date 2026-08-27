@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reading the Trial Balance — New Staff Audit Training</title>
+<meta name="description" content="How each account on the trial balance maps to an audit lead schedule, and why.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip-link" href="#schedules">Skip to the lead schedules</a>
+
+<div class="shell">
+
+  <header class="sheet-head">
+    <div>
+      <h1 class="entity">Reading the<br>trial balance</h1>
+      <p class="period">Training &middot; Year ended 6/30/2026 &middot; Part 1 of 2</p>
+    </div>
+    <div class="index-box">
+      <span class="ref">TB-1</span>
+      <span class="by">Prep <b>NEW</b></span>
+      <span class="by">Rev <b>&mdash;</b></span>
+    </div>
+  </header>
+
+  <p class="lede">
+    A trial balance is not organized the way financial statements are. It is organized
+    the way the audit is. Once you see that, the groupings that look wrong start looking
+    deliberate.
+  </p>
+
+  <div class="prose">
+    <p>
+      The obvious question on your first engagement is why Accounts Receivable, an asset,
+      is filed under Revenue, and why Accounts Payable, a liability, is filed under Expense.
+      The answer is that this trial balance is grouped by <b>audit area</b>, not by financial
+      statement caption. Accounts land together when the same procedures give evidence
+      about all of them at once.
+    </p>
+    <p>
+      Each group rolls up to a numbered <b>lead schedule</b>. That number is the index
+      reference you write in the corner of every workpaper you prepare for that area, and
+      it is how a reviewer finds your work six months later. One group below still has no
+      reference assigned, which is itself something to raise.
+    </p>
+    <p>
+      Every account carries a note explaining what it is and what to do with it. The red
+      tickmarks in the margin flag the ones that teach something beyond their own balance.
+    </p>
+  </div>
+
+  <dl class="foots" id="foots"></dl>
+
+  <section class="legend">
+    <p class="eyebrow">Tickmark legend</p>
+    <p style="margin:0;max-width:var(--measure);font-size:0.95rem;color:var(--ink-soft)">
+      Auditors annotate in the margin rather than rewriting the schedule. These four marks
+      appear throughout the accounts below, and they carry the parts worth memorizing.
+    </p>
+    <ul id="legend"></ul>
+  </section>
+
+  <p class="eyebrow" id="schedules">The nine lead schedules</p>
+  <nav class="toc" id="toc" aria-label="Lead schedules"></nav>
+
+  <main id="leads"></main>
+
+  <section class="cta">
+    <div>
+      <h2>Part 2: test yourself</h2>
+      <p>Accounts are drawn at random from all 101 in this trial balance, mixed with
+         questions about why the groupings work the way they do.</p>
+    </div>
+    <a class="btn" href="quiz.html">Start the quiz</a>
+  </section>
+
+  <p class="foot-note">
+    Balances are the adjusted 6/30/2025 and 6/30/2026 columns from the source trial balance.
+    Credits are shown in parentheses. No adjusting entries have been posted, so unadjusted
+    and adjusted current-year balances are identical. This is training material built on a
+    fictional entity.
+  </p>
+
+</div>
+
+<script src="tb-data.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var money = function (n) {
+    if (n === 0) return "\u2014";
+    var s = Math.abs(n).toLocaleString("en-US");
+    return n < 0 ? "(" + s + ")" : s;
+  };
+
+  var esc = function (s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  };
+
+  var byCat = {};
+  ACCOUNTS.forEach(function (a) {
+    (byCat[a.cls] = byCat[a.cls] || []).push(a);
+  });
+
+  /* ---- foot summary ---- */
+  var totalCY = ACCOUNTS.reduce(function (s, a) { return s + a.cy; }, 0);
+  var marked = ACCOUNTS.filter(function (a) { return a.ticks.length; }).length;
+  document.getElementById("foots").innerHTML = [
+    ["Accounts", ACCOUNTS.length, "each one explained"],
+    ["Lead schedules", CATEGORIES.length, "audit areas"],
+    ["Foots to", money(totalCY) === "\u2014" ? "0" : money(totalCY), "debits equal credits"],
+    ["Tickmarked", marked, "flagged in the margin"]
+  ].map(function (r) {
+    return "<div><dt>" + r[0] + "</dt><dd>" + r[1] + "<small>" + r[2] + "</small></dd></div>";
+  }).join("");
+
+  /* ---- tickmark legend ---- */
+  document.getElementById("legend").innerHTML = Object.keys(TICKS).map(function (k) {
+    var t = TICKS[k];
+    return '<li><span class="mk">' + t.mark + "</span><span><b>" + esc(t.label) +
+           '</b><span class="d">' + esc(t.detail) + "</span></span></li>";
+  }).join("");
+
+  /* ---- contents ---- */
+  document.getElementById("toc").innerHTML = CATEGORIES.map(function (c) {
+    var ref = c.lead ? esc(c.lead) : "no ref";
+    return '<a href="#' + slug(c.key) + '"><span class="nm">' + esc(c.name) +
+           '</span><span class="rf' + (c.lead ? "" : " none") + '">' + ref + "</span></a>";
+  }).join("");
+
+  function slug(s) {
+    return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  }
+
+  /* ---- lead schedules ---- */
+  var out = CATEGORIES.map(function (c) {
+    var rows = byCat[c.key] || [];
+    var h = '<section class="lead" id="' + slug(c.key) + '">';
+
+    h += '<div class="lead-head"><div>';
+    h += '<h2 class="section-title">' + esc(c.name) + "</h2>";
+    h += '<p class="tagline">' + esc(c.tagline) + "</p>";
+    h += "</div>" + indexBox(c) + "</div>";
+
+    h += '<div class="why"><p>' + esc(c.why) + "</p></div>";
+
+    h += '<div class="risk"><b>Where the risk sits</b>' + esc(c.risk) + "</div>";
+
+    h += '<h3 class="sub">Core procedures</h3>';
+    h += '<ol class="testing">' + c.testing.map(function (t) {
+      return "<li><span>" + esc(t) + "</span></li>";
+    }).join("") + "</ol>";
+
+    h += '<h3 class="sub">Accounts in this area <span class="rowcount">&nbsp;' +
+         rows.length + (rows.length === 1 ? " account" : " accounts") + "</span></h3>";
+    h += ledger(rows);
+
+    return h + "</section>";
+  }).join("");
+
+  document.getElementById("leads").innerHTML = out;
+
+  function indexBox(c) {
+    var ref = c.lead
+      ? '<span class="ref">' + esc(c.lead) + "</span>"
+      : '<span class="ref none">NO REF</span>';
+    var sub = c.sublead
+      ? '<span class="by">Sub <b>' + esc(c.sublead) + "</b></span>"
+      : '<span class="by">Prep <b>&mdash;</b></span>';
+    return '<div class="index-box">' + ref + sub + '<span class="by">Rev <b>&mdash;</b></span></div>';
+  }
+
+  function ledger(rows) {
+    var t = '<div class="ledger-wrap"><table class="ledger">';
+    t += "<thead><tr><th>Acct</th><th>Account</th>" +
+         '<th class="n">6/30/25</th><th class="n">6/30/26</th><th class="n">Change</th>' +
+         "<th>Lead</th></tr></thead><tbody>";
+
+    rows.forEach(function (a, i) {
+      var marks = a.ticks.map(function (k) {
+        return '<span class="tick" title="' + esc(TICKS[k].label) + '">' + TICKS[k].mark + "</span>";
+      }).join("");
+
+      // Every account now carries a note, so the stripe alternates per
+      // account and the pair reads as one band.
+      var bar = i % 2 === 1 ? " bar" : "";
+
+      var chg = a.cy - a.py;
+      t += '<tr class="acct' + bar + (a.note ? " has-note" : "") + '">';
+      t += '<td class="no">' + a.acct + "</td>";
+      t += '<td class="nm">' + esc(a.name) + marks + "</td>";
+      t += cell(a.py) + cell(a.cy) + cell(chg);
+      t += '<td class="no">' + (a.lead ? esc(a.lead) : "") + "</td>";
+      t += "</tr>";
+
+      if (a.note) {
+        t += '<tr class="note' + bar + '"><td></td>' +
+             '<td colspan="5"><div class="txt">' + esc(a.note) + "</div></td></tr>";
+      }
+    });
+
+    var sPy = rows.reduce(function (s, a) { return s + a.py; }, 0);
+    var sCy = rows.reduce(function (s, a) { return s + a.cy; }, 0);
+    t += "</tbody><tfoot><tr><td></td><td>Total &mdash; this area</td>" +
+         '<td class="num">' + money(sPy) + '</td><td class="num">' + money(sCy) +
+         '</td><td class="num">' + money(sCy - sPy) + "</td><td></td></tr></tfoot>";
+    return t + "</table></div>";
+  }
+
+  function cell(n) {
+    var cls = "num" + (n < 0 ? " neg" : n === 0 ? " zero" : "");
+    return '<td class="' + cls + '">' + money(n) + "</td>";
+  }
+})();
+</script>
+</body>
+</html>
