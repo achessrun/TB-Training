@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Full Trial Balance — New Staff Audit Training</title>
+<meta name="description" content="The complete trial balance for the year ended 6/30/2026.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip-link" href="#tb">Skip to the trial balance</a>
+
+<div class="shell">
+
+  <nav class="topnav" aria-label="Sections">
+    <a class="nbtn" href="index.html">Breakdown</a>
+    <a class="nbtn on" href="trial-balance.html">Full trial balance</a>
+    <a class="nbtn" href="quiz.html">Quiz</a>
+  </nav>
+
+  <header class="sheet-head">
+    <div>
+      <h1 class="entity">Trial<br>balance</h1>
+      <p class="period">Training &middot; Year ended 6/30/2026</p>
+    </div>
+    <div class="index-box">
+      <span class="ref">TB</span>
+      <span class="by">Rows <b>10&ndash;102</b></span>
+      <span class="by">Acct <b id="acctcount">&mdash;</b></span>
+    </div>
+  </header>
+
+  <p class="lede">
+    The complete trial balance, in workbook order. Columns match the source file, and the
+    row numbers match the spreadsheet.
+  </p>
+
+  <dl class="foots" id="foots"></dl>
+
+  <section id="tb">
+    <div class="controls-bar">
+      <div class="viewswitch" role="group" aria-label="Order">
+        <button class="vbtn on" data-order="tb">Workbook order</button>
+        <button class="vbtn" data-order="cls">Grouped by area</button>
+      </div>
+      <div class="searchbox">
+        <input type="search" id="q" placeholder="Filter by account name, number, or row"
+               autocomplete="off" aria-label="Filter accounts">
+        <span class="hits" id="hits"></span>
+      </div>
+    </div>
+
+    <div id="sheet"></div>
+  </section>
+
+  <p class="foot-note">
+    Columns match the source workbook: 6/30/2025 adjusted, 6/30/2026 unadjusted, adjusting
+    entries, and 6/30/2026 adjusted. No adjusting entries have been posted, so the
+    unadjusted and adjusted current-year columns are identical. Credits are shown in
+    parentheses. Click any classification to jump to that area's breakdown.
+  </p>
+
+</div>
+
+<script src="tb-data.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var order = "tb";
+  var query = "";
+
+  var money = function (n) {
+    if (!n) return "\u2014";
+    var s = Math.abs(n).toLocaleString("en-US");
+    return n < 0 ? "(" + s + ")" : s;
+  };
+
+  var esc = function (s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  };
+
+  function slug(s) {
+    return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  }
+
+  document.getElementById("acctcount").textContent = ACCOUNTS.length;
+
+  var sum = function (list, f) {
+    return list.reduce(function (s, a) { return s + a[f]; }, 0);
+  };
+
+  document.getElementById("foots").innerHTML = [
+    ["Accounts", ACCOUNTS.length, "in the trial balance"],
+    ["Total debits", money(sum(ACCOUNTS.filter(function (a) { return a.cy > 0; }), "cy")), "6/30/2026 adjusted"],
+    ["Total credits", money(-sum(ACCOUNTS.filter(function (a) { return a.cy < 0; }), "cy")), "6/30/2026 adjusted"],
+    ["Foots to", sum(ACCOUNTS, "cy") === 0 ? "0" : money(sum(ACCOUNTS, "cy")), "in balance"]
+  ].map(function (r) {
+    return "<div><dt>" + r[0] + "</dt><dd>" + r[1] + "<small>" + r[2] + "</small></dd></div>";
+  }).join("");
+
+  function matches(a) {
+    if (!query) return true;
+    var q = query.toLowerCase();
+    return a.name.toLowerCase().indexOf(q) > -1 ||
+           String(a.acct).indexOf(q) > -1 ||
+           String(a.row).indexOf(q) > -1 ||
+           a.cls.toLowerCase().indexOf(q) > -1 ||
+           (a.lead || "").indexOf(q) > -1;
+  }
+
+  // Header mirrors the workbook: a period row above, a label row below.
+  function thead() {
+    return "<thead>" +
+      '<tr class="tier">' +
+        '<th colspan="3"></th>' +
+        '<th class="n">6/30/2025</th>' +
+        '<th class="n">6/30/2026</th>' +
+        '<th class="n"></th>' +
+        '<th class="n">6/30/2026</th>' +
+        '<th class="n"></th>' +
+        "<th></th><th></th>" +
+      "</tr><tr>" +
+        "<th>Row</th><th>Acct#</th><th>Account</th>" +
+        '<th class="n">Adjusted</th><th class="n">Unadjusted</th>' +
+        '<th class="n">AJEs</th><th class="n">Adjusted</th>' +
+        '<th class="n">Change</th><th>Lead</th><th>Classification</th>' +
+      "</tr></thead>";
+  }
+
+  function cell(n) {
+    return '<td class="num' + (n < 0 ? " neg" : !n ? " zero" : "") + '">' + money(n) + "</td>";
+  }
+
+  function row(a, i) {
+    var marks = a.ticks.map(function (k) {
+      return '<span class="tick" title="' + esc(TICKS[k].label) + '">' + TICKS[k].mark + "</span>";
+    }).join("");
+    return '<tr id="r' + a.row + '" class="acct' + (i % 2 === 1 ? " bar" : "") + '">' +
+      '<td class="rw">' + a.row + "</td>" +
+      '<td class="no">' + a.acct + "</td>" +
+      '<td class="nm">' + esc(a.name) + marks + "</td>" +
+      cell(a.py) + cell(a.un) + cell(a.aje) + cell(a.cy) + cell(a.cy - a.py) +
+      '<td class="no">' + (a.lead ? esc(a.lead) : "") + "</td>" +
+      '<td class="cl"><a href="index.html#' + slug(a.cls) + '">' + esc(a.cls) + "</a></td>" +
+      "</tr>";
+  }
+
+  function totals(list, label) {
+    return "<tr class=\"tot\"><td></td><td></td><td>" + label + "</td>" +
+      '<td class="num">' + money(sum(list, "py")) + "</td>" +
+      '<td class="num">' + money(sum(list, "un")) + "</td>" +
+      '<td class="num">' + money(sum(list, "aje")) + "</td>" +
+      '<td class="num">' + money(sum(list, "cy")) + "</td>" +
+      '<td class="num">' + money(sum(list, "cy") - sum(list, "py")) + "</td>" +
+      "<td></td><td></td></tr>";
+  }
+
+  function render() {
+    var list = ACCOUNTS.filter(matches);
+    var box = document.getElementById("sheet");
+
+    if (!list.length) {
+      box.innerHTML = '<p class="empty">No account matches &ldquo;' + esc(query) +
+        "&rdquo;. Try an account number, part of a name, or a workbook row number.</p>";
+      document.getElementById("hits").textContent = "0 accounts";
+      return;
+    }
+
+    var body = "";
+    if (order === "cls") {
+      var n = 0;
+      CATEGORIES.forEach(function (c) {
+        var g = list.filter(function (a) { return a.cls === c.key; });
+        if (!g.length) return;
+        body += '<tr class="grp"><td colspan="10">' + esc(c.name) +
+                '<span class="grp-ref">' + esc(c.lead) + "</span></td></tr>";
+        body += g.map(function (a) { return row(a, n++); }).join("");
+        body += totals(g, "Total \u2014 " + c.name);
+      });
+    } else {
+      body = list.map(row).join("");
+    }
+
+    box.innerHTML = '<div class="ledger-wrap"><table class="ledger tbfull">' + thead() +
+      "<tbody>" + body + "</tbody>" +
+      "<tfoot>" + totals(list, query ? "Total \u2014 filtered" : "Total") + "</tfoot>" +
+      "</table></div>";
+
+    document.getElementById("hits").textContent =
+      query ? list.length + (list.length === 1 ? " account" : " accounts") : "";
+
+    // A row linked from the breakdown page should be findable on arrival.
+    if (location.hash && /^#r\d+$/.test(location.hash)) {
+      var t = document.getElementById(location.hash.slice(1));
+      if (t) { t.classList.add("flash"); t.scrollIntoView({ block: "center" }); }
+    }
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll(".vbtn"), function (b) {
+    b.addEventListener("click", function () {
+      Array.prototype.forEach.call(document.querySelectorAll(".vbtn"), function (x) {
+        x.classList.remove("on");
+      });
+      b.classList.add("on");
+      order = b.getAttribute("data-order");
+      render();
+    });
+  });
+
+  var qEl = document.getElementById("q");
+  var timer;
+  qEl.addEventListener("input", function () {
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      query = qEl.value.trim();
+      render();
+    }, 120);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

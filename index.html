@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account Breakdown — New Staff Audit Training</title>
+<meta name="description" content="Why each account on the trial balance is classified where it is, and what it puts at risk.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip-link" href="#areas">Skip to the lead schedules</a>
+
+<div class="shell">
+
+  <nav class="topnav" aria-label="Sections">
+    <a class="nbtn on" href="index.html">Breakdown</a>
+    <a class="nbtn" href="trial-balance.html">Full trial balance</a>
+    <a class="nbtn" href="quiz.html">Quiz</a>
+  </nav>
+
+  <header class="sheet-head">
+    <div>
+      <h1 class="entity">Account<br>breakdown</h1>
+      <p class="period">Training &middot; Year ended 6/30/2026 &middot; Part 1 of 2</p>
+    </div>
+    <div class="index-box">
+      <span class="ref">TB-1</span>
+      <span class="by">Prep <b>NEW</b></span>
+      <span class="by">Rev <b>&mdash;</b></span>
+    </div>
+  </header>
+
+  <p class="lede">
+    A trial balance is not organized the way financial statements are. It is organized
+    the way the audit is. Once you see that, the groupings that look wrong start looking
+    deliberate.
+  </p>
+
+  <div class="prose">
+    <p>
+      Accounts receivable is an asset, yet it is filed under Revenue. Accounts payable is
+      a liability, yet it is filed under Expense. Neither is a mistake. This trial balance
+      groups accounts by <b>audit area</b> rather than by financial statement caption, and
+      accounts land together when one set of procedures gives evidence about all of them.
+    </p>
+    <p>
+      Each area rolls up to a numbered <b>lead schedule</b>. That number is the index
+      reference you write in the corner of every workpaper for that area, and it is how a
+      reviewer finds your work six months later.
+    </p>
+    <p>
+      There are no balances on this page on purpose. The question here is <b>why an account
+      belongs where it does</b>, and what it puts at risk &mdash; not what it happens to be
+      worth this year. The <a href="trial-balance.html">full trial balance</a> is one click
+      away whenever you need the figures, and every account below shows its workbook row.
+    </p>
+  </div>
+
+  <dl class="foots" id="foots"></dl>
+
+  <section class="legend">
+    <p class="eyebrow">Tickmark legend</p>
+    <p class="legend-intro">
+      Auditors annotate in the margin rather than rewriting the schedule. These marks
+      appear beside account names throughout.
+    </p>
+    <ul id="legend"></ul>
+  </section>
+
+  <section id="areas">
+    <div class="controls-bar">
+      <a class="btn ghost small" href="trial-balance.html">Open the full trial balance</a>
+      <div class="searchbox">
+        <input type="search" id="q" placeholder="Filter by account name, number, or row"
+               autocomplete="off" aria-label="Filter accounts">
+        <span class="hits" id="hits"></span>
+      </div>
+    </div>
+
+    <nav class="toc" id="toc" aria-label="Lead schedules"></nav>
+
+    <div id="leads"></div>
+  </section>
+
+  <section class="cta">
+    <div>
+      <h2>Part 2: test yourself</h2>
+      <p>Accounts are drawn at random across all nine areas, mixed with questions about
+         why the groupings work the way they do.</p>
+    </div>
+    <a class="btn" href="quiz.html">Start the quiz</a>
+  </section>
+
+  <p class="foot-note">
+    Row numbers refer to rows in the source workbook. This is training material built on a
+    fictional entity.
+  </p>
+
+</div>
+
+<script src="tb-data.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var query = "";
+
+  var esc = function (s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  };
+
+  function slug(s) {
+    return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  }
+
+  /* ---------------- summary ---------------- */
+
+  var marked = ACCOUNTS.filter(function (a) { return a.ticks.length; }).length;
+  document.getElementById("foots").innerHTML = [
+    ["Accounts", ACCOUNTS.length, "each one explained"],
+    ["Lead schedules", CATEGORIES.length, "audit areas"],
+    ["Tickmarked", marked, "flagged in the margin"]
+  ].map(function (r) {
+    return "<div><dt>" + r[0] + "</dt><dd>" + r[1] + "<small>" + r[2] + "</small></dd></div>";
+  }).join("");
+
+  document.getElementById("legend").innerHTML = Object.keys(TICKS).map(function (k) {
+    var t = TICKS[k];
+    return '<li><span class="mk">' + t.mark + "</span><span><b>" + esc(t.label) +
+           '</b><span class="d">' + esc(t.detail) + "</span></span></li>";
+  }).join("");
+
+  document.getElementById("toc").innerHTML = CATEGORIES.map(function (c) {
+    return '<a href="#' + slug(c.key) + '"><span class="nm">' + esc(c.name) +
+           '</span><span class="rf">' + esc(c.lead) + "</span></a>";
+  }).join("");
+
+  /* ---------------- filtering ---------------- */
+
+  function matches(a) {
+    if (!query) return true;
+    var q = query.toLowerCase();
+    return a.name.toLowerCase().indexOf(q) > -1 ||
+           String(a.acct).indexOf(q) > -1 ||
+           String(a.row).indexOf(q) > -1 ||
+           a.cls.toLowerCase().indexOf(q) > -1 ||
+           (a.lead || "").indexOf(q) > -1;
+  }
+
+  /* ---------------- account entries ---------------- */
+
+  // No table here. Without balances there is nothing to align in columns,
+  // and a stacked entry reads properly on a phone.
+  function entry(a, i) {
+    var marks = a.ticks.map(function (k) {
+      return '<span class="tick" title="' + esc(TICKS[k].label) + '">' + TICKS[k].mark + "</span>";
+    }).join("");
+
+    var h = '<article class="ac' + (i % 2 === 1 ? " bar" : "") + '">';
+    h += '<div class="ac-head">';
+    h += '<span class="ac-no">' + a.acct + "</span>";
+    h += '<h4 class="ac-nm">' + esc(a.name) + marks + "</h4>";
+    h += '<a class="ac-row" href="trial-balance.html#r' + a.row +
+         '" title="See this account in the trial balance">row ' + a.row + "</a>";
+    h += "</div>";
+    h += '<p class="ac-why">' + esc(a.why) + "</p>";
+    if (a.risk) {
+      h += '<p class="ac-risk"><b>Risk</b>' + esc(a.risk) + "</p>";
+    }
+    return h + "</article>";
+  }
+
+  function indexBox(c) {
+    return '<div class="index-box"><span class="ref">' + esc(c.lead) + "</span>" +
+           '<span class="by">Prep <b>&mdash;</b></span>' +
+           '<span class="by">Rev <b>&mdash;</b></span></div>';
+  }
+
+  function render() {
+    var shown = 0;
+    var html = CATEGORIES.map(function (c) {
+      var list = ACCOUNTS.filter(function (a) { return a.cls === c.key && matches(a); });
+      if (!list.length) return "";
+      shown += list.length;
+
+      var h = '<section class="lead" id="' + slug(c.key) + '">';
+      h += '<div class="lead-head"><div>';
+      h += '<h2 class="section-title">' + esc(c.name) + "</h2>";
+      h += '<p class="tagline">' + esc(c.tagline) + "</p>";
+      h += "</div>" + indexBox(c) + "</div>";
+
+      if (!query) {
+        h += '<div class="why"><p>' + esc(c.why) + "</p></div>";
+        h += '<div class="risk"><b>Where the risk sits</b>' + esc(c.risk) + "</div>";
+        h += '<h3 class="sub">Core procedures</h3>';
+        h += '<ol class="testing">' + c.testing.map(function (t) {
+          return "<li><span>" + esc(t) + "</span></li>";
+        }).join("") + "</ol>";
+      }
+
+      h += '<h3 class="sub">Accounts <span class="rowcount">&nbsp;' + list.length +
+           (list.length === 1 ? " account" : " accounts") + "</span></h3>";
+      h += '<div class="aclist">' + list.map(entry).join("") + "</div>";
+      return h + "</section>";
+    }).join("");
+
+    document.getElementById("leads").innerHTML = shown
+      ? html
+      : '<p class="empty">No account matches &ldquo;' + esc(query) +
+        "&rdquo;. Try an account number, part of a name, or a workbook row number.</p>";
+
+    document.getElementById("hits").textContent =
+      query ? shown + (shown === 1 ? " account" : " accounts") : "";
+
+    document.getElementById("toc").style.display = query ? "none" : "";
+  }
+
+  var qEl = document.getElementById("q");
+  var timer;
+  qEl.addEventListener("input", function () {
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      query = qEl.value.trim();
+      render();
+    }, 120);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
